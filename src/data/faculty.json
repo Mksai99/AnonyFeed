@@ -1,0 +1,32 @@
+[
+  {
+    "id": "3",
+    "name": "Dr. Beatrice Mueller",
+    "department": "Computer Science"
+  },
+  {
+    "id": "4",
+    "name": "Prof. Kenji Tanaka",
+    "department": "Information Technology"
+  },
+  {
+    "id": "5",
+    "name": "Dr. Sofia Rossi",
+    "department": "Electronics"
+  },
+  {
+    "id": "2e7eee92-a596-4d90-a31d-37f42eb12169",
+    "name": "Narasimha Reddy",
+    "department": "Computer Science"
+  },
+  {
+    "id": "c5a0f039-0352-481d-a024-526176b501f4",
+    "name": "Dr Vijay Kumar",
+    "department": "Information Technology"
+  },
+  {
+    "id": "993861be-c187-4a94-99ef-4c2c88962dd1",
+    "name": "Bala Konda Reddy",
+    "department": "Civil"
+  }
+]
