@@ -21,17 +21,41 @@ const RedactSensitiveDataOutputSchema = z.object({
 export type RedactSensitiveDataOutput = z.infer<typeof RedactSensitiveDataOutputSchema>;
 
 export async function redactSensitiveData(input: RedactSensitiveDataInput): Promise<RedactSensitiveDataOutput> {
-  try {
-    return await redactSensitiveDataFlow(input);
-  } catch (error) {
-    console.error('AI redaction service error:', error);
-    // Fallback: Basic regex-based PII redaction
-    const basicRedactedText = input.text
-      .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}/g, '[EMAIL REDACTED]')
-      .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[PHONE REDACTED]')
-      .replace(/\b(?:\d[ -]*?){13,16}\b/g, '[CARD NUMBER REDACTED]');
-    return { redactedText: basicRedactedText };
+  // Allow disabling AI redaction via an environment variable in case
+  // the model is overloaded or you want to avoid external calls in prod.
+  const aiEnabled = (process.env.REDACT_AI_ENABLED ?? '1') !== '0';
+
+  if (aiEnabled) {
+    const maxAttempts = 3;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await redactSensitiveDataFlow(input);
+      } catch (error) {
+        lastError = error;
+        // If it's a 5xx / overloaded error, back off and retry
+        const backoffMs = 300 * Math.pow(2, attempt - 1);
+        console.warn(`redactSensitiveData attempt ${attempt} failed, backing off ${backoffMs}ms`);
+        if (attempt < maxAttempts) {
+          await new Promise((res) => setTimeout(res, backoffMs));
+          continue;
+        }
+      }
+    }
+
+    console.error('AI redaction service failed after retries:', lastError);
+  } else {
+    console.info('AI redaction disabled via REDACT_AI_ENABLED env var, using fallback redaction.');
   }
+
+  // Fallback: Basic regex-based PII redaction (used when AI fails or is disabled)
+  const basicRedactedText = input.text
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}/g, '[EMAIL REDACTED]')
+    .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[PHONE REDACTED]')
+    .replace(/\b(?:\d[ -]*?){13,16}\b/g, '[CARD NUMBER REDACTED]');
+
+  return { redactedText: basicRedactedText };
 }
 
 const redactSensitiveDataPrompt = ai.definePrompt({
